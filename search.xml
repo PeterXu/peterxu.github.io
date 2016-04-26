@@ -4,6 +4,81 @@
   
     
     <entry>
+      <title><![CDATA[nginx和tomcat配置完美支持HTTPS]]></title>
+      <url>http://zenvv.com/2016/04/26/nginx-proxy-https-tomcat/</url>
+      <content type="html"><![CDATA[<link rel="stylesheet" type="text/css" href="/assets/css/APlayer.min.css"><script src="/assets/js/APlayer.min.js"> </script><p>之前的几篇文章简单描述了nginx反向代理和tomcat之间的一些常用配置，满足一些常规需求。<br>但是，随着互联网安全隐患发生的频繁性，现如今安全性已经成为一个基本需求，而https则是其中的最基础平台之一。</p>
+<p>在nginx中启用ssl非常简单，只需要几句简单的配置和证书即可。当nginx和tomcat配合使用，其中nginx作为反向代理前端时，该如何实现https呢？</p>
+<p>第一种方法，即在nginx和tomcat中使用同样的证书，打开https功能。<br>nginx接受到用户请求进行解密进行处理，加密请求发送到tomcat；<br>tomcat节点接受到请求解密进行处理，对响应数据进行加密转发回到ningx；<br>最后，nginx需要解密tomcat的响应数据，再重新加密转发给客户端。</p>
+<p>可以看到，整个过程非常复杂，并且tomcat和nginx节点均需要加密解密多次。</p>
+<p>第二种方法，只需要在nginx前端启用ssl, nginx与后台tomcat之间的通信走http/1.0明文。<br>nginx接受用户请求进行解密处理，发送明文请求到tomcat;<br>tomcat对请求明文进行处理，返回响应数据的明文给ningx;<br>最后nginx对tomcat的响应数据加密转发到用户。</p>
+<p>需要注意在第二种方法中，默认tomcat返回的响应明文中的url link全部是http地址。<br>也即是说，用户的第一次请求(逻辑上的首次http get)可以正常返回，随后根据在该返回内容中的访问link都被拒绝，由于这些link（由相对地址转化而来，原本就是绝对url地址除外）都是http而不是https。</p>
+<p>对于这个问题，需要从两方面配置解决，首先在nginx前端代理请求到tomcat时需要附带上用户请求的协议名字schema（http或https）, 配置如下:<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">location / &#123;</span><br><span class="line">    proxy_set_header Host $http_host;</span><br><span class="line">    proxy_set_header X-Real-Ip $remote_addr;</span><br><span class="line">    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;</span><br><span class="line">    proxy_set_header X-Forwarded-Proto  $scheme;</span><br><span class="line">    proxy_set_header Cookie $http_cookie;</span><br><span class="line">    proxy_pass http://tomcat;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>X-Forwarded-Proto即是在http header请求中添加用户真实协议，而不是代理协议http.</p>
+<p>其次在tomcat中需要显示使用http head中该字段x-forwarded-proto, 配置如下:<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">&lt;Valve className=&quot;org.apache.catalina.valves.RemoteIpValve&quot;</span><br><span class="line">   remoteIpHeader=&quot;x-forwarded-for&quot;</span><br><span class="line">   remoteIpProxiesHeader=&quot;x-forwarded-by&quot;</span><br><span class="line">   protocolHeader=&quot;x-forwarded-proto&quot;</span><br><span class="line">/&gt;</span><br></pre></td></tr></table></figure></p>
+<p>tomcat的mod_remoteip模块将会根据protocolHeader字段和protocolHeaderHttpsValue值作如下逻辑判断：<br>如果protocolHeader对应字段的值与protocolHeaderHttpsValue(默认是https,可以设置)一致且是https，则root url是<a href="https://ip" target="_blank" rel="external">https://ip</a>;<br>否则采用<a href="http://ip作为root" target="_blank" rel="external">http://ip作为root</a> url,不论用户真实请求的协议.  </p>
+<p>这样，nginx和tomcat搭配的https请求就可以工作了，但这仅仅适用于nginx和tomcat均处于内网中。</p>
+<p>在数据中心中，前端nginx一般位于DMZ区域拥有公网IP地址，而tomcat可能位于局域网中只有内网地址。这时我们会发现以上配置不起作用。<br>由于tomcat默认机制中需要判断代理服务器的IP地址，如果该IP地址是内网网段，则启用以上逻辑否则无效，而转而使用默认规则http处理。</p>
+<p>为了解决这个问题，需要将代理IP(例如a.b.c.d)添加到tomcat的允许区域中，可进行如下配置:<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">&lt;Valve className=&quot;org.apache.catalina.valves.RemoteIpValve&quot;</span><br><span class="line">   remoteIpHeader=&quot;x-forwarded-for&quot;</span><br><span class="line">   remoteIpProxiesHeader=&quot;x-forwarded-by&quot;</span><br><span class="line">   protocolHeader=&quot;x-forwarded-proto&quot;</span><br><span class="line">   internalProxies=&quot;a\.b\.c\.d&quot;</span><br><span class="line">/&gt;</span><br></pre></td></tr></table></figure></p>
+<p>internalProxies将会覆盖tomcat的默认内网网段设置，这时通过公网ip可以正常访问https，但在内部直接连接tomcat则只能获取到首页内容，类似上面访问nginx的情形。<br>internalProxies支持正则表达式，可以在将nginx代理公网ip和内网网段全部添加进去即可，如下所示:<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">internalProxies=&quot;a\.b\.c\.d,10\.*,192\.168\.*&quot;</span><br></pre></td></tr></table></figure></p>
+<p>既然tomcat已经在数据中心内网中，可以有更简单的设置:<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">&lt;Valve className=&quot;org.apache.catalina.valves.RemoteIpValve&quot;</span><br><span class="line">   remoteIpHeader=&quot;x-forwarded-for&quot;</span><br><span class="line">   remoteIpProxiesHeader=&quot;x-forwarded-by&quot;</span><br><span class="line">   protocolHeader=&quot;.*&quot;</span><br><span class="line">/&gt;</span><br></pre></td></tr></table></figure></p>
+<p>如此，完美解决nginx + tomcat + https的问题。</p>
+]]></content>
+    </entry>
+    
+    <entry>
+      <title><![CDATA[DNS服务器dnsmasq]]></title>
+      <url>http://zenvv.com/2016/04/19/dnsmasq-by-talk/</url>
+      <content type="html"><![CDATA[<link rel="stylesheet" type="text/css" href="/assets/css/APlayer.min.css"><script src="/assets/js/APlayer.min.js"> </script><p>在构建数据中心网络时, 建立一个独立的dns服务是必不可少的.</p>
+<p>dns服务器有很多种, 如bind9/skydns等, 但是bind9显得笨重难以配置维护, skydns是不错的软件, 在多种分布式系统中被使用, 如google的k8s.</p>
+<p>这里介绍另一种简洁的dns服务软件 - dnsmasq, 配置简单如下所示.</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">#listen-address=..</span><br><span class="line">expand-hosts</span><br><span class="line">domain=example.com</span><br><span class="line">cache-size=300</span><br><span class="line">#no-resolv</span><br><span class="line">domain-needed</span><br><span class="line"></span><br><span class="line"># for other servers(consul)</span><br><span class="line">server=/consul./127.0.0.1#8600</span><br><span class="line"></span><br><span class="line"># for common domain</span><br><span class="line">address=/ntp.io/10.10.10.9</span><br><span class="line">address=/dns.io/10.10.10.10</span><br></pre></td></tr></table></figure>
+<p>listen-address默认不配置时则在所有ip地址监听.<br>expand-hosts和domain搭配使用, 自动将/etc/hosts中的名字扩展到example.com.<br>no-resolv不使用/etc/resolv.conf对域名解析.<br>domain-needed不转发没有格式的域名.<br>server=..用于某些域名转发到其它dns server, 在这个例子中将所有以.consul为后缀的域名, 转发到127.0.0.1:8600的dns服务器进行解析.<br>address=..用于定义本地网络的dns域名解析.  </p>
+]]></content>
+    </entry>
+    
+    <entry>
+      <title><![CDATA[系统监控及日志收集elk+beats]]></title>
+      <url>http://zenvv.com/2016/04/18/elk-beats-by-talk/</url>
+      <content type="html"><![CDATA[<link rel="stylesheet" type="text/css" href="/assets/css/APlayer.min.css"><script src="/assets/js/APlayer.min.js"> </script><p>针对数据中心的监控, 许多公司积极响应并开源自己的方案, 传统的有nagios和zabbix等.</p>
+<p>当前比较流行的方案有flume/scribe/openfalcon/elk(beats), 这里将具体介绍下elk.</p>
+<p>最新官方建议使用轻量级的beats(golang)取代logstash作为客户端, beats收集数据发送到logstash broker或者直接发送到elasticsearch. </p>
+<p>笔者建议使用beats =&gt; logstash =&gt; elasticsearch =&gt; kibana这种数据流, 利用logstash可以对数据作额外处理以及减少系统耦合性.  </p>
+<h5 id="beats客户端"><a href="#beats客户端" class="headerlink" title="beats客户端"></a>beats客户端</h5><p>beats包含多种工具, 常用的有三种:<br>topbeat: 主要监控系统的cpu/memory/disk, 周期性的收集系统数据.<br>filebeat: 用于收集系统和应用程序日志, 发送日志到logstash作额外处理可以收集感兴趣的信息.<br>packetbeat: 用于嗅探系统网络信息(被动), 如http/mysql/等等.</p>
+<p>但是, topbeat中没有收集linux系统/proc/net基本信息的功能, 而是集成到packetbeat中显得稍笨重不方便使用.</p>
+<h5 id="logstash"><a href="#logstash" class="headerlink" title="logstash"></a>logstash</h5><p>logstash起初是作为elk中的客户端, 但作为一个收集系统基本数据的工具, 而显得太笨重而一直被诟病.<br>尽管如此, logstash提供了许多插件功能极其丰富, 很适合作为broker节点.</p>
+<p>logstash的数据处理通常有三部分构成, 分别对应于三种插件:<br>(1) input插件, 获取数据, 比如监听端口或者从消息队列中订阅数据.<br>(2) filter插件, 对收集到的数据作进一步的处理, 例如解析ip地址为经纬度.<br>(3) output插件, 输出数据到其它服务中,如elasticsearch/kafka/zeromq.  </p>
+<h5 id="elasticsearch"><a href="#elasticsearch" class="headerlink" title="elasticsearch"></a>elasticsearch</h5><p>终于回到正题了, elasticsearch是基于lucence引擎的一套简单高可用系统, 提供了非常方面的nosql/rest服务的功能, 也是这套监控系统的核心所在. </p>
+<p>最新版本的elasticsearch可以很方便建立一个分布式集群, 在该集群中通常有master和数据这两大类节点.</p>
+<p>(1) 节点属性<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">cluster.name: es_cluster    # 集群名</span><br><span class="line">node.name: $&#123;HOSTNAME&#125;		# 将hostname作为节点名字</span><br><span class="line">node.master: true			# 节点是否可以被选作为master节点</span><br><span class="line">node.data: true				# 节点是否可以被选作为data节点</span><br></pre></td></tr></table></figure></p>
+<p>这里注意, 如果node.master和node.data均为false, 则该节点是一个仲裁节点, 类似nginx负载均衡的功能.</p>
+<p>(2) 发现机制zen<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">discovery.zen.ping.multicast.enabled: false</span><br><span class="line">discovery.zen.ping_interval: 3s</span><br><span class="line">discovery.zen.ping_timeout: 30s</span><br><span class="line">discovery.zen.ping_retries: 5</span><br><span class="line">discovery.zen.ping.unicast.hosts: &quot;host1&quot;, &quot;host2:9300&quot;</span><br></pre></td></tr></table></figure></p>
+<p>采用unicast方式显示设置集群中的节点, 默认各个节点之间使用的端口是9300.</p>
+<p>(3) 配置网络<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"># network</span><br><span class="line">network.host: 0.0.0.0</span><br><span class="line">network.bind_host: 0.0.0.0</span><br><span class="line">network.publish_host: 0.0.0.0</span><br><span class="line"></span><br><span class="line"># http service</span><br><span class="line">http.compression: true</span><br><span class="line">http.compression_level: 3</span><br></pre></td></tr></table></figure></p>
+<h5 id="kibana"><a href="#kibana" class="headerlink" title="kibana"></a>kibana</h5><p>收集数据是为了展现, kibana即是一种基于elasticsearch数据展现的工具.<br>kibana默认提供了topbeat/filebeat/packetbeat等的数据展示模版. </p>
+<h5 id="elastalert"><a href="#elastalert" class="headerlink" title="elastalert"></a>elastalert</h5><p>作为一个监控系统, 报警机制不得缺少, elastic官方提供的收费方案比较简单.<br>这里介绍一种免费开源方案, 那就是<a href="https://github.com/Yelp/elastalert.git" target="_blank" rel="external">elastalert</a>, 具体参考官方代码.</p>
+]]></content>
+    </entry>
+    
+    <entry>
+      <title><![CDATA[Rexify运维工具]]></title>
+      <url>http://zenvv.com/2016/04/16/rexify-ansible-by-talk/</url>
+      <content type="html"><![CDATA[<link rel="stylesheet" type="text/css" href="/assets/css/APlayer.min.css"><script src="/assets/js/APlayer.min.js"> </script><p>当系统达到一定规模时，传统单机器维护方式已经不再适合，需要一些自动化工具进行管理。</p>
+<p>下面将介绍在实践工程中使用的几种方式(针对单一类型系统: linux)。</p>
+<h4 id="1-ssh"><a href="#1-ssh" class="headerlink" title="1. ssh"></a>1. ssh</h4><p>ssh工具一款linux及其类系统中的利器，常被用来作远程系统登录和数据拷贝，同时还有另外一个重要功能: 远程执行命令。</p>
+<p>同时，针对一些小规模的系统(例如几十个节点)，ssh也拥有足够的能力对其自动化管理。</p>
+<p>在配置完成ssh的无密码key连接方式之后，编写一些bash脚本管理远程主机地址即可。当然，纯ssh工具对管理人员的要求比较高。</p>
+<p>可以考虑采用一些第三方工具简化管理，常见工具如puppet, chef, cfengine, ansible以及rexify等。</p>
+<p>使用过其中的两款ansible和rexify, 均属于灵巧型-无客户端和服务端，非常适合喜欢干净系统的工程师(最烦在各个子节点上安装agent)，也是在ssh的基础上实现的。</p>
+<h4 id="2-ansible"><a href="#2-ansible" class="headerlink" title="2. ansible"></a>2. ansible</h4><p>ansible是python语言开发的一种框架，基于yaml语法和提供的模块定义各种playbook，对软件进行配置管理，并且能够支持windows(powershell)。</p>
+<p>ansible对于常规的运维管理已经足够，如果需要支持复杂的定制化服务，则需要编写playbook甚至新模块来支持。</p>
+<p>不得不说，编写playbook也是一个繁琐的过程，其功能常显得鸡肋以及力不从心(如在nosql中作join查询)。</p>
+<p>可以通过编写新模块或者脚本对其扩展，ansible新模块的方式不是很方便。<br>而编写脚本然后远程执行相对简单，但也常遇到一些不可思议的错误。</p>
+<h4 id="3-rexify"><a href="#3-rexify" class="headerlink" title="3. rexify"></a>3. rexify</h4><p>rexify是perl语言开发的框架，目标即是无客户端轻量级，与ansible不同的是其完全基于模块的方式进行远程管理，充分利用了perl语言的优点。</p>
+<p>rexify模块提供的功能足够丰富，在此基础上进行一些整合，即可轻易地支持所需要的功能。同时也对脚本的远程执行支持非常好。</p>
+]]></content>
+    </entry>
+    
+    <entry>
       <title><![CDATA[Nginx虚拟主机和多域名处理逻辑]]></title>
       <url>http://zenvv.com/2016/04/13/nginx-server-config/</url>
       <content type="html"><![CDATA[<link rel="stylesheet" type="text/css" href="/assets/css/APlayer.min.css"><script src="/assets/js/APlayer.min.js"> </script><p>与apache httpd类似，在nginx中通过server字段定义多个虚拟主机。<br>nginx按照server加载顺序处理用户请求, 但可能导致一些意外行为，下面将进行具体描述。</p>

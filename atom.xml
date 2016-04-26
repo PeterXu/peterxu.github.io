@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="http://zenvv.com/"/>
-  <updated>2016-04-15T13:19:52.118Z</updated>
+  <updated>2016-04-26T15:02:38.361Z</updated>
   <id>http://zenvv.com/</id>
   
   <author>
@@ -14,6 +14,137 @@
   </author>
   
   <generator uri="http://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>nginx和tomcat配置完美支持HTTPS</title>
+    <link href="http://zenvv.com/2016/04/26/nginx-proxy-https-tomcat/"/>
+    <id>http://zenvv.com/2016/04/26/nginx-proxy-https-tomcat/</id>
+    <published>2016-04-26T14:07:00.000Z</published>
+    <updated>2016-04-26T15:02:38.361Z</updated>
+    
+    <content type="html">&lt;link rel=&quot;stylesheet&quot; type=&quot;text/css&quot; href=&quot;/assets/css/APlayer.min.css&quot;&gt;&lt;script src=&quot;/assets/js/APlayer.min.js&quot;&gt; &lt;/script&gt;&lt;p&gt;之前的几篇文章简单描述了nginx反向代理和tomcat之间的一些常用配置，满足一些常规需求。&lt;br&gt;但是，随着互联网安全隐患发生的频繁性，现如今安全性已经成为一个基本需求，而https则是其中的最基础平台之一。&lt;/p&gt;
+&lt;p&gt;在nginx中启用ssl非常简单，只需要几句简单的配置和证书即可。当nginx和tomcat配合使用，其中nginx作为反向代理前端时，该如何实现https呢？&lt;/p&gt;
+&lt;p&gt;第一种方法，即在nginx和tomcat中使用同样的证书，打开https功能。&lt;br&gt;nginx接受到用户请求进行解密进行处理，加密请求发送到tomcat；&lt;br&gt;tomcat节点接受到请求解密进行处理，对响应数据进行加密转发回到ningx；&lt;br&gt;最后，nginx需要解密tomcat的响应数据，再重新加密转发给客户端。&lt;/p&gt;
+&lt;p&gt;可以看到，整个过程非常复杂，并且tomcat和nginx节点均需要加密解密多次。&lt;/p&gt;
+&lt;p&gt;第二种方法，只需要在nginx前端启用ssl, nginx与后台tomcat之间的通信走http/1.0明文。&lt;br&gt;nginx接受用户请求进行解密处理，发送明文请求到tomcat;&lt;br&gt;tomcat对请求明文进行处理，返回响应数据的明文给ningx;&lt;br&gt;最后nginx对tomcat的响应数据加密转发到用户。&lt;/p&gt;
+&lt;p&gt;需要注意在第二种方法中，默认tomcat返回的响应明文中的url link全部是http地址。&lt;br&gt;也即是说，用户的第一次请求(逻辑上的首次http get)可以正常返回，随后根据在该返回内容中的访问link都被拒绝，由于这些link（由相对地址转化而来，原本就是绝对url地址除外）都是http而不是https。&lt;/p&gt;
+&lt;p&gt;对于这个问题，需要从两方面配置解决，首先在nginx前端代理请求到tomcat时需要附带上用户请求的协议名字schema（http或https）, 配置如下:&lt;br&gt;&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;5&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;6&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;7&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;8&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;location / &amp;#123;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    proxy_set_header Host $http_host;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    proxy_set_header X-Real-Ip $remote_addr;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    proxy_set_header X-Forwarded-Proto  $scheme;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    proxy_set_header Cookie $http_cookie;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    proxy_pass http://tomcat;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&amp;#125;&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
+&lt;p&gt;X-Forwarded-Proto即是在http header请求中添加用户真实协议，而不是代理协议http.&lt;/p&gt;
+&lt;p&gt;其次在tomcat中需要显示使用http head中该字段x-forwarded-proto, 配置如下:&lt;br&gt;&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;5&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;&amp;lt;Valve className=&amp;quot;org.apache.catalina.valves.RemoteIpValve&amp;quot;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;   remoteIpHeader=&amp;quot;x-forwarded-for&amp;quot;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;   remoteIpProxiesHeader=&amp;quot;x-forwarded-by&amp;quot;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;   protocolHeader=&amp;quot;x-forwarded-proto&amp;quot;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;/&amp;gt;&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
+&lt;p&gt;tomcat的mod_remoteip模块将会根据protocolHeader字段和protocolHeaderHttpsValue值作如下逻辑判断：&lt;br&gt;如果protocolHeader对应字段的值与protocolHeaderHttpsValue(默认是https,可以设置)一致且是https，则root url是&lt;a href=&quot;https://ip&quot; target=&quot;_blank&quot; rel=&quot;external&quot;&gt;https://ip&lt;/a&gt;;&lt;br&gt;否则采用&lt;a href=&quot;http://ip作为root&quot; target=&quot;_blank&quot; rel=&quot;external&quot;&gt;http://ip作为root&lt;/a&gt; url,不论用户真实请求的协议.  &lt;/p&gt;
+&lt;p&gt;这样，nginx和tomcat搭配的https请求就可以工作了，但这仅仅适用于nginx和tomcat均处于内网中。&lt;/p&gt;
+&lt;p&gt;在数据中心中，前端nginx一般位于DMZ区域拥有公网IP地址，而tomcat可能位于局域网中只有内网地址。这时我们会发现以上配置不起作用。&lt;br&gt;由于tomcat默认机制中需要判断代理服务器的IP地址，如果该IP地址是内网网段，则启用以上逻辑否则无效，而转而使用默认规则http处理。&lt;/p&gt;
+&lt;p&gt;为了解决这个问题，需要将代理IP(例如a.b.c.d)添加到tomcat的允许区域中，可进行如下配置:&lt;br&gt;&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;5&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;6&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;&amp;lt;Valve className=&amp;quot;org.apache.catalina.valves.RemoteIpValve&amp;quot;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;   remoteIpHeader=&amp;quot;x-forwarded-for&amp;quot;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;   remoteIpProxiesHeader=&amp;quot;x-forwarded-by&amp;quot;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;   protocolHeader=&amp;quot;x-forwarded-proto&amp;quot;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;   internalProxies=&amp;quot;a\.b\.c\.d&amp;quot;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;/&amp;gt;&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
+&lt;p&gt;internalProxies将会覆盖tomcat的默认内网网段设置，这时通过公网ip可以正常访问https，但在内部直接连接tomcat则只能获取到首页内容，类似上面访问nginx的情形。&lt;br&gt;internalProxies支持正则表达式，可以在将nginx代理公网ip和内网网段全部添加进去即可，如下所示:&lt;br&gt;&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;internalProxies=&amp;quot;a\.b\.c\.d,10\.*,192\.168\.*&amp;quot;&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
+&lt;p&gt;既然tomcat已经在数据中心内网中，可以有更简单的设置:&lt;br&gt;&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;5&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;&amp;lt;Valve className=&amp;quot;org.apache.catalina.valves.RemoteIpValve&amp;quot;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;   remoteIpHeader=&amp;quot;x-forwarded-for&amp;quot;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;   remoteIpProxiesHeader=&amp;quot;x-forwarded-by&amp;quot;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;   protocolHeader=&amp;quot;.*&amp;quot;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;/&amp;gt;&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
+&lt;p&gt;如此，完美解决nginx + tomcat + https的问题。&lt;/p&gt;
+</content>
+    
+    <summary type="html">
+    
+      &lt;link rel=&quot;stylesheet&quot; type=&quot;text/css&quot; href=&quot;/assets/css/APlayer.min.css&quot;&gt;&lt;script src=&quot;/assets/js/APlayer.min.js&quot;&gt; &lt;/script&gt;&lt;p&gt;之前的几篇文章简单描述了n
+    
+    </summary>
+    
+      <category term="技术" scheme="http://zenvv.com/categories/%E6%8A%80%E6%9C%AF/"/>
+    
+    
+  </entry>
+  
+  <entry>
+    <title>DNS服务器dnsmasq</title>
+    <link href="http://zenvv.com/2016/04/19/dnsmasq-by-talk/"/>
+    <id>http://zenvv.com/2016/04/19/dnsmasq-by-talk/</id>
+    <published>2016-04-18T16:41:00.000Z</published>
+    <updated>2016-04-24T17:07:29.227Z</updated>
+    
+    <content type="html">&lt;link rel=&quot;stylesheet&quot; type=&quot;text/css&quot; href=&quot;/assets/css/APlayer.min.css&quot;&gt;&lt;script src=&quot;/assets/js/APlayer.min.js&quot;&gt; &lt;/script&gt;&lt;p&gt;在构建数据中心网络时, 建立一个独立的dns服务是必不可少的.&lt;/p&gt;
+&lt;p&gt;dns服务器有很多种, 如bind9/skydns等, 但是bind9显得笨重难以配置维护, skydns是不错的软件, 在多种分布式系统中被使用, 如google的k8s.&lt;/p&gt;
+&lt;p&gt;这里介绍另一种简洁的dns服务软件 - dnsmasq, 配置简单如下所示.&lt;/p&gt;
+&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;5&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;6&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;7&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;8&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;9&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;10&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;11&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;12&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;13&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;#listen-address=..&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;expand-hosts&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;domain=example.com&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;cache-size=300&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;#no-resolv&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;domain-needed&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;# for other servers(consul)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;server=/consul./127.0.0.1#8600&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;# for common domain&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;address=/ntp.io/10.10.10.9&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;address=/dns.io/10.10.10.10&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;p&gt;listen-address默认不配置时则在所有ip地址监听.&lt;br&gt;expand-hosts和domain搭配使用, 自动将/etc/hosts中的名字扩展到example.com.&lt;br&gt;no-resolv不使用/etc/resolv.conf对域名解析.&lt;br&gt;domain-needed不转发没有格式的域名.&lt;br&gt;server=..用于某些域名转发到其它dns server, 在这个例子中将所有以.consul为后缀的域名, 转发到127.0.0.1:8600的dns服务器进行解析.&lt;br&gt;address=..用于定义本地网络的dns域名解析.  &lt;/p&gt;
+</content>
+    
+    <summary type="html">
+    
+      &lt;link rel=&quot;stylesheet&quot; type=&quot;text/css&quot; href=&quot;/assets/css/APlayer.min.css&quot;&gt;&lt;script src=&quot;/assets/js/APlayer.min.js&quot;&gt; &lt;/script&gt;&lt;p&gt;在构建数据中心网络时, 建
+    
+    </summary>
+    
+      <category term="技术" scheme="http://zenvv.com/categories/%E6%8A%80%E6%9C%AF/"/>
+    
+    
+  </entry>
+  
+  <entry>
+    <title>系统监控及日志收集elk+beats</title>
+    <link href="http://zenvv.com/2016/04/18/elk-beats-by-talk/"/>
+    <id>http://zenvv.com/2016/04/18/elk-beats-by-talk/</id>
+    <published>2016-04-18T15:13:00.000Z</published>
+    <updated>2016-04-24T16:34:15.564Z</updated>
+    
+    <content type="html">&lt;link rel=&quot;stylesheet&quot; type=&quot;text/css&quot; href=&quot;/assets/css/APlayer.min.css&quot;&gt;&lt;script src=&quot;/assets/js/APlayer.min.js&quot;&gt; &lt;/script&gt;&lt;p&gt;针对数据中心的监控, 许多公司积极响应并开源自己的方案, 传统的有nagios和zabbix等.&lt;/p&gt;
+&lt;p&gt;当前比较流行的方案有flume/scribe/openfalcon/elk(beats), 这里将具体介绍下elk.&lt;/p&gt;
+&lt;p&gt;最新官方建议使用轻量级的beats(golang)取代logstash作为客户端, beats收集数据发送到logstash broker或者直接发送到elasticsearch. &lt;/p&gt;
+&lt;p&gt;笔者建议使用beats =&amp;gt; logstash =&amp;gt; elasticsearch =&amp;gt; kibana这种数据流, 利用logstash可以对数据作额外处理以及减少系统耦合性.  &lt;/p&gt;
+&lt;h5 id=&quot;beats客户端&quot;&gt;&lt;a href=&quot;#beats客户端&quot; class=&quot;headerlink&quot; title=&quot;beats客户端&quot;&gt;&lt;/a&gt;beats客户端&lt;/h5&gt;&lt;p&gt;beats包含多种工具, 常用的有三种:&lt;br&gt;topbeat: 主要监控系统的cpu/memory/disk, 周期性的收集系统数据.&lt;br&gt;filebeat: 用于收集系统和应用程序日志, 发送日志到logstash作额外处理可以收集感兴趣的信息.&lt;br&gt;packetbeat: 用于嗅探系统网络信息(被动), 如http/mysql/等等.&lt;/p&gt;
+&lt;p&gt;但是, topbeat中没有收集linux系统/proc/net基本信息的功能, 而是集成到packetbeat中显得稍笨重不方便使用.&lt;/p&gt;
+&lt;h5 id=&quot;logstash&quot;&gt;&lt;a href=&quot;#logstash&quot; class=&quot;headerlink&quot; title=&quot;logstash&quot;&gt;&lt;/a&gt;logstash&lt;/h5&gt;&lt;p&gt;logstash起初是作为elk中的客户端, 但作为一个收集系统基本数据的工具, 而显得太笨重而一直被诟病.&lt;br&gt;尽管如此, logstash提供了许多插件功能极其丰富, 很适合作为broker节点.&lt;/p&gt;
+&lt;p&gt;logstash的数据处理通常有三部分构成, 分别对应于三种插件:&lt;br&gt;(1) input插件, 获取数据, 比如监听端口或者从消息队列中订阅数据.&lt;br&gt;(2) filter插件, 对收集到的数据作进一步的处理, 例如解析ip地址为经纬度.&lt;br&gt;(3) output插件, 输出数据到其它服务中,如elasticsearch/kafka/zeromq.  &lt;/p&gt;
+&lt;h5 id=&quot;elasticsearch&quot;&gt;&lt;a href=&quot;#elasticsearch&quot; class=&quot;headerlink&quot; title=&quot;elasticsearch&quot;&gt;&lt;/a&gt;elasticsearch&lt;/h5&gt;&lt;p&gt;终于回到正题了, elasticsearch是基于lucence引擎的一套简单高可用系统, 提供了非常方面的nosql/rest服务的功能, 也是这套监控系统的核心所在. &lt;/p&gt;
+&lt;p&gt;最新版本的elasticsearch可以很方便建立一个分布式集群, 在该集群中通常有master和数据这两大类节点.&lt;/p&gt;
+&lt;p&gt;(1) 节点属性&lt;br&gt;&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;cluster.name: es_cluster    # 集群名&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;node.name: $&amp;#123;HOSTNAME&amp;#125;		# 将hostname作为节点名字&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;node.master: true			# 节点是否可以被选作为master节点&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;node.data: true				# 节点是否可以被选作为data节点&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
+&lt;p&gt;这里注意, 如果node.master和node.data均为false, 则该节点是一个仲裁节点, 类似nginx负载均衡的功能.&lt;/p&gt;
+&lt;p&gt;(2) 发现机制zen&lt;br&gt;&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;5&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;discovery.zen.ping.multicast.enabled: false&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;discovery.zen.ping_interval: 3s&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;discovery.zen.ping_timeout: 30s&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;discovery.zen.ping_retries: 5&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;discovery.zen.ping.unicast.hosts: &amp;quot;host1&amp;quot;, &amp;quot;host2:9300&amp;quot;&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
+&lt;p&gt;采用unicast方式显示设置集群中的节点, 默认各个节点之间使用的端口是9300.&lt;/p&gt;
+&lt;p&gt;(3) 配置网络&lt;br&gt;&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;5&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;6&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;7&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;8&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;# network&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;network.host: 0.0.0.0&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;network.bind_host: 0.0.0.0&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;network.publish_host: 0.0.0.0&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;# http service&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;http.compression: true&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;http.compression_level: 3&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
+&lt;h5 id=&quot;kibana&quot;&gt;&lt;a href=&quot;#kibana&quot; class=&quot;headerlink&quot; title=&quot;kibana&quot;&gt;&lt;/a&gt;kibana&lt;/h5&gt;&lt;p&gt;收集数据是为了展现, kibana即是一种基于elasticsearch数据展现的工具.&lt;br&gt;kibana默认提供了topbeat/filebeat/packetbeat等的数据展示模版. &lt;/p&gt;
+&lt;h5 id=&quot;elastalert&quot;&gt;&lt;a href=&quot;#elastalert&quot; class=&quot;headerlink&quot; title=&quot;elastalert&quot;&gt;&lt;/a&gt;elastalert&lt;/h5&gt;&lt;p&gt;作为一个监控系统, 报警机制不得缺少, elastic官方提供的收费方案比较简单.&lt;br&gt;这里介绍一种免费开源方案, 那就是&lt;a href=&quot;https://github.com/Yelp/elastalert.git&quot; target=&quot;_blank&quot; rel=&quot;external&quot;&gt;elastalert&lt;/a&gt;, 具体参考官方代码.&lt;/p&gt;
+</content>
+    
+    <summary type="html">
+    
+      &lt;link rel=&quot;stylesheet&quot; type=&quot;text/css&quot; href=&quot;/assets/css/APlayer.min.css&quot;&gt;&lt;script src=&quot;/assets/js/APlayer.min.js&quot;&gt; &lt;/script&gt;&lt;p&gt;针对数据中心的监控, 许多
+    
+    </summary>
+    
+      <category term="技术" scheme="http://zenvv.com/categories/%E6%8A%80%E6%9C%AF/"/>
+    
+    
+  </entry>
+  
+  <entry>
+    <title>Rexify运维工具</title>
+    <link href="http://zenvv.com/2016/04/16/rexify-ansible-by-talk/"/>
+    <id>http://zenvv.com/2016/04/16/rexify-ansible-by-talk/</id>
+    <published>2016-04-16T01:33:00.000Z</published>
+    <updated>2016-04-24T16:34:42.051Z</updated>
+    
+    <content type="html">&lt;link rel=&quot;stylesheet&quot; type=&quot;text/css&quot; href=&quot;/assets/css/APlayer.min.css&quot;&gt;&lt;script src=&quot;/assets/js/APlayer.min.js&quot;&gt; &lt;/script&gt;&lt;p&gt;当系统达到一定规模时，传统单机器维护方式已经不再适合，需要一些自动化工具进行管理。&lt;/p&gt;
+&lt;p&gt;下面将介绍在实践工程中使用的几种方式(针对单一类型系统: linux)。&lt;/p&gt;
+&lt;h4 id=&quot;1-ssh&quot;&gt;&lt;a href=&quot;#1-ssh&quot; class=&quot;headerlink&quot; title=&quot;1. ssh&quot;&gt;&lt;/a&gt;1. ssh&lt;/h4&gt;&lt;p&gt;ssh工具一款linux及其类系统中的利器，常被用来作远程系统登录和数据拷贝，同时还有另外一个重要功能: 远程执行命令。&lt;/p&gt;
+&lt;p&gt;同时，针对一些小规模的系统(例如几十个节点)，ssh也拥有足够的能力对其自动化管理。&lt;/p&gt;
+&lt;p&gt;在配置完成ssh的无密码key连接方式之后，编写一些bash脚本管理远程主机地址即可。当然，纯ssh工具对管理人员的要求比较高。&lt;/p&gt;
+&lt;p&gt;可以考虑采用一些第三方工具简化管理，常见工具如puppet, chef, cfengine, ansible以及rexify等。&lt;/p&gt;
+&lt;p&gt;使用过其中的两款ansible和rexify, 均属于灵巧型-无客户端和服务端，非常适合喜欢干净系统的工程师(最烦在各个子节点上安装agent)，也是在ssh的基础上实现的。&lt;/p&gt;
+&lt;h4 id=&quot;2-ansible&quot;&gt;&lt;a href=&quot;#2-ansible&quot; class=&quot;headerlink&quot; title=&quot;2. ansible&quot;&gt;&lt;/a&gt;2. ansible&lt;/h4&gt;&lt;p&gt;ansible是python语言开发的一种框架，基于yaml语法和提供的模块定义各种playbook，对软件进行配置管理，并且能够支持windows(powershell)。&lt;/p&gt;
+&lt;p&gt;ansible对于常规的运维管理已经足够，如果需要支持复杂的定制化服务，则需要编写playbook甚至新模块来支持。&lt;/p&gt;
+&lt;p&gt;不得不说，编写playbook也是一个繁琐的过程，其功能常显得鸡肋以及力不从心(如在nosql中作join查询)。&lt;/p&gt;
+&lt;p&gt;可以通过编写新模块或者脚本对其扩展，ansible新模块的方式不是很方便。&lt;br&gt;而编写脚本然后远程执行相对简单，但也常遇到一些不可思议的错误。&lt;/p&gt;
+&lt;h4 id=&quot;3-rexify&quot;&gt;&lt;a href=&quot;#3-rexify&quot; class=&quot;headerlink&quot; title=&quot;3. rexify&quot;&gt;&lt;/a&gt;3. rexify&lt;/h4&gt;&lt;p&gt;rexify是perl语言开发的框架，目标即是无客户端轻量级，与ansible不同的是其完全基于模块的方式进行远程管理，充分利用了perl语言的优点。&lt;/p&gt;
+&lt;p&gt;rexify模块提供的功能足够丰富，在此基础上进行一些整合，即可轻易地支持所需要的功能。同时也对脚本的远程执行支持非常好。&lt;/p&gt;
+</content>
+    
+    <summary type="html">
+    
+      &lt;link rel=&quot;stylesheet&quot; type=&quot;text/css&quot; href=&quot;/assets/css/APlayer.min.css&quot;&gt;&lt;script src=&quot;/assets/js/APlayer.min.js&quot;&gt; &lt;/script&gt;&lt;p&gt;当系统达到一定规模时，传统
+    
+    </summary>
+    
+      <category term="技术" scheme="http://zenvv.com/categories/%E6%8A%80%E6%9C%AF/"/>
+    
+    
+  </entry>
   
   <entry>
     <title>Nginx虚拟主机和多域名处理逻辑</title>
@@ -531,119 +662,6 @@
     
       <category term="技术" scheme="http://zenvv.com/categories/%E6%8A%80%E6%9C%AF/"/>
     
-    
-  </entry>
-  
-  <entry>
-    <title>关于圆内外2n+1个点的分配</title>
-    <link href="http://zenvv.com/2008/12/06/circle-point-allocation/"/>
-    <id>http://zenvv.com/2008/12/06/circle-point-allocation/</id>
-    <published>2008-12-06T13:53:00.000Z</published>
-    <updated>2016-04-04T14:35:39.313Z</updated>
-    
-    <content type="html">&lt;link rel=&quot;stylesheet&quot; type=&quot;text/css&quot; href=&quot;/assets/css/APlayer.min.css&quot;&gt;&lt;script src=&quot;/assets/js/APlayer.min.js&quot;&gt; &lt;/script&gt;&lt;p&gt;假设平面坐标上有2n+1个点，如何作一个圆，使得恰有n个点在圆内，n个在圆外，1个在圆上。  &lt;/p&gt;
-&lt;p&gt;分析: 假设已经找到这个圆，那么在该圆内任选一条弦，且满足该弦与不在圆上的另外2n个点中的任意一个均不共线，则该弦和这2n个点可以构造2n个三角形。由于在圆外的点与弦所构成的三角形中弦的对角必定小于与该弦同方向的圆周角；同理，在圆内的点与弦所构成的三角形中则呈大于关系；而在圆上的点与弦的关系是或者共线(即0角度)，或者为圆周角。&lt;/p&gt;
-&lt;p&gt;根据以上分析，可以采用如下方法可以找到这个圆。但直接使用如上方法，非常复杂。下面首先对数据进 行预处理。这2n+1个点向x正向和y正向坐标轴移动(即是从左下向右上移动)，直至最左下的点移动到原点O处，这时另外2n个点要么在x轴正半轴上，要 么在x轴上方。因此过O点可以找到一条直线，使2n个点位于它的同一侧(且不在线上)，在该直线上任取一个点P(与O点不重复)，以OP为边，以线外2n 个点为第三个顶点可以构造出2n个三角形。然后对所有三角形中OP的对角(共2n个)进行排序并判断：若第n个角不等于第n+1个角，则任取一个在区间 (第n,第n+1)这两个角度之间的角度(设为k), 则以OP为弦且同方向圆周角大小为k唯一确定一个圆，该圆即满足条件。若第n个角度与第n+1个相等，则调整P点的位置(在程序里易实现)，重新排序判断 直至求得可行解。&lt;/p&gt;
-&lt;p&gt;关于该方法的证明和程序后续可能会提供。这里参照了以前一个中学竞赛的题目，以及javaman所提的通过将所有点移动到同一边以简化算法的idea，在此表示感谢。&lt;/p&gt;
-</content>
-    
-    <summary type="html">
-    
-      &lt;link rel=&quot;stylesheet&quot; type=&quot;text/css&quot; href=&quot;/assets/css/APlayer.min.css&quot;&gt;&lt;script src=&quot;/assets/js/APlayer.min.js&quot;&gt; &lt;/script&gt;&lt;p&gt;假设平面坐标上有2n+1个
-    
-    </summary>
-    
-      <category term="算法" scheme="http://zenvv.com/categories/%E7%AE%97%E6%B3%95/"/>
-    
-    
-  </entry>
-  
-  <entry>
-    <title>等概率随机数的生成方法</title>
-    <link href="http://zenvv.com/2008/12/04/random-generator/"/>
-    <id>http://zenvv.com/2008/12/04/random-generator/</id>
-    <published>2008-12-04T08:43:00.000Z</published>
-    <updated>2016-04-04T13:04:55.957Z</updated>
-    
-    <content type="html">&lt;link rel=&quot;stylesheet&quot; type=&quot;text/css&quot; href=&quot;/assets/css/APlayer.min.css&quot;&gt;&lt;script src=&quot;/assets/js/APlayer.min.js&quot;&gt; &lt;/script&gt;&lt;p&gt;最近遇到一道关于随机数生成的问题，题目如下:&lt;/p&gt;
-&lt;p&gt;(1) 假设rand8()只生存[0,7]间的任意实数且属于均匀概率分布，则如何实现一个随机函数rand11()生成0-10之间的任意实数也属于均匀概率分布?&lt;br&gt;(2) 假设rand8()只生存[0,7]间的任意整数且属于均匀概率分布，则如何实现一个随机函数rand11()生成0-10之间的任意整数也属于均匀概率分布?&lt;/p&gt;
-&lt;p&gt;第一题简单，即是 rand11() = (10.0*rand8()) / (7.0);  &lt;/p&gt;
-&lt;p&gt;第二题有难度， rand8()只产生0,1,2..7这8个数，如何将其放大到0,1,2..10这11个数。在这里我们可以考虑使用笛卡尔乘积的方法(这里用&lt;strong&gt;表 示)。则rand8() &lt;/strong&gt; rand8()一共可一产生64种编码结果，且是等概率的(属于均匀概率分布)。从这64种结果中预先随机选取11种情况分别映射为 0,1,2,…,10这11个整数。&lt;br&gt;然后定义rand11() 如下:  若rand8() &lt;strong&gt; rand*() 产生的编码为预先选取的，则返回其相应的映射值，否则重新执行rand8()&lt;/strong&gt;rand8()直至生产为预先选取的。则rand11() 满足需求。&lt;br&gt;这个解决方法是javaman提供的，在此表示感谢!&lt;/p&gt;
-</content>
-    
-    <summary type="html">
-    
-      &lt;link rel=&quot;stylesheet&quot; type=&quot;text/css&quot; href=&quot;/assets/css/APlayer.min.css&quot;&gt;&lt;script src=&quot;/assets/js/APlayer.min.js&quot;&gt; &lt;/script&gt;&lt;p&gt;最近遇到一道关于随机数生成
-    
-    </summary>
-    
-      <category term="算法" scheme="http://zenvv.com/categories/%E7%AE%97%E6%B3%95/"/>
-    
-    
-  </entry>
-  
-  <entry>
-    <title>python 在不同层级目录import 模块的方法</title>
-    <link href="http://zenvv.com/2008/11/22/python-import-path/"/>
-    <id>http://zenvv.com/2008/11/22/python-import-path/</id>
-    <published>2008-11-22T07:06:00.000Z</published>
-    <updated>2016-04-07T14:06:36.437Z</updated>
-    
-    <content type="html">&lt;link rel=&quot;stylesheet&quot; type=&quot;text/css&quot; href=&quot;/assets/css/APlayer.min.css&quot;&gt;&lt;script src=&quot;/assets/js/APlayer.min.js&quot;&gt; &lt;/script&gt;&lt;font size=&quot;1&quot; color=&quot;grey&quot;&gt;&lt;br&gt;[声明] 很久前在chinaunix hi中分享了几篇blog, 由于其意外关闭导致全部丢失。如今，意外的发现有几篇被很多人转载！同时也感谢那些博主们，让我能够找回这篇旧文。&lt;br&gt;&lt;/font&gt;
-
-
-&lt;p&gt;python包含子目录中的模块方法比较简单，关键是能够在sys.path里面找到通向模块文件的路径。&lt;/p&gt;
-&lt;p&gt;下面将具体介绍几种常用情况:&lt;br&gt;（1）主程序与模块程序在同一目录下&lt;br&gt;如下面程序结构:&lt;br&gt;&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;└── src&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    ├── mod1.py&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    └── test1.py&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
-&lt;p&gt;若在程序test1.py中导入模块mod1, 则直接使用import mod1或from mod1 import *;&lt;/p&gt;
-&lt;p&gt;（2）主程序所在目录是模块所在目录的父(或祖辈)目录&lt;br&gt;如下面程序结构:&lt;br&gt;&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;5&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;└── src&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    ├── mod1.py&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    ├── mod2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    │   └── mod2.py&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    └── test1.py&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
-&lt;p&gt;若在程序test1.py中导入模块mod2, 需要在mod2文件夹中建立空文件__init__.py文件(也可以在该文件中自定义输出模块接口); 然后使用 from mod2.mod2 import * 或import mod2.mod2.&lt;/p&gt;
-&lt;p&gt;（3）主程序导入上层目录中模块或其他目录(平级)下的模块&lt;br&gt;如下面程序结构:&lt;br&gt;&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;5&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;6&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;7&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;└── src&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    ├── mod1.py&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    ├── mod2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    │   └── mod2.py&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    ├── sub&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    │   └── test2.py&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    └── test1.py&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
-&lt;p&gt;若在程序test2.py中导入模块mod1和mod2。&lt;br&gt;首先需要在mod2下建立&lt;strong&gt;init&lt;/strong&gt;.py文件(同(2))，src下不必建立该文件;&lt;br&gt;然后调用方式如下.&lt;/p&gt;
-&lt;p&gt;下面程序执行方式均在程序文件所在目录下执行，如test2.py是在cd sub; 之后执行python test2.py.&lt;br&gt;而test1.py是在cd src;之后执行python test1.py; 不保证在src目录下执行python sub/test2.py成功。&lt;br&gt;&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;import sys&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;sys.path.append(”..”)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;import mod1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;import mod2.mod2&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
-&lt;p&gt;从(3)可以看出，导入模块关键是能够根据sys.path环境变量的值，找到具体模块的路径。这里仅介绍上面三种简单情况。&lt;/p&gt;
-</content>
-    
-    <summary type="html">
-    
-      &lt;link rel=&quot;stylesheet&quot; type=&quot;text/css&quot; href=&quot;/assets/css/APlayer.min.css&quot;&gt;&lt;script src=&quot;/assets/js/APlayer.min.js&quot;&gt; &lt;/script&gt;&lt;font size=&quot;1&quot; c
-    
-    </summary>
-    
-      <category term="技术" scheme="http://zenvv.com/categories/%E6%8A%80%E6%9C%AF/"/>
-    
-    
-      <category term="python" scheme="http://zenvv.com/tags/python/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>优化playmp3list代码</title>
-    <link href="http://zenvv.com/2008/09/13/optimize-playmp3list/"/>
-    <id>http://zenvv.com/2008/09/13/optimize-playmp3list/</id>
-    <published>2008-09-13T03:43:00.000Z</published>
-    <updated>2016-04-04T16:20:14.509Z</updated>
-    
-    <content type="html">&lt;link rel=&quot;stylesheet&quot; type=&quot;text/css&quot; href=&quot;/assets/css/APlayer.min.css&quot;&gt;&lt;script src=&quot;/assets/js/APlayer.min.js&quot;&gt; &lt;/script&gt;&lt;p&gt;今天修改了播放器playmp3list的部分代码bug。&lt;/p&gt;
-&lt;p&gt;直接使用aptitude install playmp3list安装上的player存在两个问题：&lt;br&gt;（1）对中文支持不好，&lt;br&gt;（2）cpu消耗太多，也是最大的bug。  &lt;/p&gt;
-&lt;p&gt;我使用的平台及硬件属性为: debian 2.6.24-1-686 GNU/Linux, Genuine Intel(R) CPU T2050  @ 1.60GHz，cpu占有率平均为80%!!!&lt;/p&gt;
-&lt;p&gt;首先增加对中文的支持，&lt;br&gt;(1) 需要安装ncursesw开发库，&lt;br&gt;(2) 将playmp3list.h中的宏定义#define NCURSES &lt;ncurses ncurses.h=&quot;&quot;&gt;修改为#define NCURSES &lt;ncursesw ncurses.h=&quot;&quot;&gt;，&lt;br&gt;(3)将生成的Makefile中的行LIBS =  -lcurses修改为LIBS =  -lncursesw，&lt;br&gt;(4) 在main.cc中包含#include &lt;locale.h&gt;，并在main()函数的开始处调用setlocale(LC_ALL, “”); 注意不能使用setlocale(LC_ALL, NULL)。&lt;br&gt;之后make; make install即可安装完成, playmp3list yourMusicPath 运行后可以看到正确中文字符了。&lt;/locale.h&gt;&lt;/ncursesw&gt;&lt;/ncurses&gt;&lt;/p&gt;
-&lt;p&gt;其次，修改高cpu消耗的bug, 实际上这个很简单，只需在主循环里面增加个usleep函数即可，以防止持续高速的屏幕刷新(估计作者在没有测试内存消耗的情况下即提交代码了)。我添加的位置是: 在void play_list(void)函数中的do{}while的循环体起始处添加usleep(300);语句 //这里的睡眠时间只要不影响界面的正常刷新即可。&lt;/p&gt;
-&lt;p&gt;若发现播放mp3时程序退出，需要修改一个地方重新编译即可。将interface.cc文件中的函数&lt;br&gt;&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;5&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;6&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;7&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;8&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;9&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;10&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;11&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;12&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;13&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;void&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;playmp3listWindow::do_refresh()&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&amp;#123; /*touchwin(stdscr);&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;  refresh();*/  // I don’t know why this doesn’t work, so I’m using this instead…&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;  resize();&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&amp;#125; // do_refresh&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;修改为:&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;void&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;playmp3listWindow::do_refresh()&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&amp;#123; touchwin(stdscr);&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;  refresh();  // I don’t know why this doesn’t work, so I’m using this instead…&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;  //resize();&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&amp;#125; // do_refresh&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
-&lt;p&gt;关于原因，我想你已经看到的注释了。另外需要安长mpg123解码库才能播放mp3(附件有我improve的代码)。&lt;/p&gt;
-&lt;p&gt;最后，一个完整的shell下mp3播放器完成了，去体验一下。&lt;/p&gt;
-&lt;p&gt;&lt;a href=&quot;http://download.csdn.net/detail/uskee/786855&quot; target=&quot;_blank&quot; rel=&quot;external&quot;&gt;附源代码下载地址&lt;/a&gt;&lt;/p&gt;
-</content>
-    
-    <summary type="html">
-    
-      &lt;link rel=&quot;stylesheet&quot; type=&quot;text/css&quot; href=&quot;/assets/css/APlayer.min.css&quot;&gt;&lt;script src=&quot;/assets/js/APlayer.min.js&quot;&gt; &lt;/script&gt;&lt;p&gt;今天修改了播放器playm
-    
-    </summary>
-    
-      <category term="技术" scheme="http://zenvv.com/categories/%E6%8A%80%E6%9C%AF/"/>
-    
-    
-      <category term="mp3" scheme="http://zenvv.com/tags/mp3/"/>
     
   </entry>
   
