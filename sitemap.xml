@@ -2,9 +2,135 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>http://zenvv.com/2016/05/26/nginx-rewrite/</loc>
+    
+    <lastmod>2016-05-30T09:00:32.510Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://zenvv.com/2016/05/28/nginx-core/</loc>
+    
+    <lastmod>2016-05-30T09:00:23.963Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://zenvv.com/2016/05/12/video-format/</loc>
+    
+    <lastmod>2016-05-24T00:41:32.154Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://zenvv.com/2016/05/24/video-colorspace/</loc>
+    
+    <lastmod>2016-05-24T00:36:08.124Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://zenvv.com/2016/05/17/consul-cluster-config/</loc>
+    
+    <lastmod>2016-05-23T07:29:44.924Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://zenvv.com/2016/05/15/lsyncd-rsync-config/</loc>
+    
+    <lastmod>2016-05-23T07:28:47.001Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://zenvv.com/2016/05/10/glusterfs3-by-talk/</loc>
+    
+    <lastmod>2016-05-23T06:27:39.344Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://zenvv.com/2016/05/02/docker-by-talk/</loc>
+    
+    <lastmod>2016-05-21T05:38:50.700Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://zenvv.com/2016/05/01/glusterfs2-by-talk/</loc>
+    
+    <lastmod>2016-05-06T03:00:48.085Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://zenvv.com/2016/04/29/gluster-by-talk/</loc>
+    
+    <lastmod>2016-05-02T02:35:35.453Z</lastmod>
+    
+  </url>
+  
+  <url>
     <loc>http://zenvv.com/2016/04/26/nginx-proxy-https-tomcat/</loc>
     
-    <lastmod>2016-04-26T15:02:38.361Z</lastmod>
+    <lastmod>2016-05-02T02:22:59.683Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://zenvv.com/2016/04/25/keepalived-by-talk/</loc>
+    
+    <lastmod>2016-05-01T03:04:09.790Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://zenvv.com/2008/09/13/optimize-playmp3list/</loc>
+    
+    <lastmod>2016-04-26T15:16:49.234Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://zenvv.com/2009/05/12/debian-install-mythtv/</loc>
+    
+    <lastmod>2016-04-26T15:16:31.174Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://zenvv.com/2009/10/04/Linux-dss-6-0-3/</loc>
+    
+    <lastmod>2016-04-26T15:16:08.667Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://zenvv.com/2014/12/10/webrtc-by-talk/</loc>
+    
+    <lastmod>2016-04-26T15:15:52.067Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://zenvv.com/2016/04/07/tomcat-config/</loc>
+    
+    <lastmod>2016-04-26T15:14:22.060Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://zenvv.com/2016/04/11/nginx-slash-http/</loc>
+    
+    <lastmod>2016-04-26T15:13:29.220Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://zenvv.com/2016/04/13/nginx-server-config/</loc>
+    
+    <lastmod>2016-04-26T15:12:33.894Z</lastmod>
     
   </url>
   
@@ -37,13 +163,6 @@
   </url>
   
   <url>
-    <loc>http://zenvv.com/2014/12/10/webrtc-by-talk/</loc>
-    
-    <lastmod>2016-04-17T03:06:45.423Z</lastmod>
-    
-  </url>
-  
-  <url>
     <loc>http://zenvv.com/2016/04/09/nginx-proxy-config/</loc>
     
     <lastmod>2016-04-15T13:37:46.542Z</lastmod>
@@ -51,30 +170,9 @@
   </url>
   
   <url>
-    <loc>http://zenvv.com/2016/04/11/nginx-slash-http/</loc>
-    
-    <lastmod>2016-04-15T13:20:51.611Z</lastmod>
-    
-  </url>
-  
-  <url>
-    <loc>http://zenvv.com/2016/04/13/nginx-server-config/</loc>
-    
-    <lastmod>2016-04-15T13:19:52.118Z</lastmod>
-    
-  </url>
-  
-  <url>
     <loc>http://zenvv.com/2016/04/07/python-in-practice/</loc>
     
     <lastmod>2016-04-14T03:53:04.418Z</lastmod>
-    
-  </url>
-  
-  <url>
-    <loc>http://zenvv.com/2009/05/12/debian-install-mythtv/</loc>
-    
-    <lastmod>2016-04-14T03:41:26.165Z</lastmod>
     
   </url>
   
@@ -93,20 +191,6 @@
   </url>
   
   <url>
-    <loc>http://zenvv.com/2016/04/07/tomcat-config/</loc>
-    
-    <lastmod>2016-04-14T03:38:05.515Z</lastmod>
-    
-  </url>
-  
-  <url>
-    <loc>http://zenvv.com/2009/10/04/Linux-dss-6-0-3/</loc>
-    
-    <lastmod>2016-04-07T14:11:50.361Z</lastmod>
-    
-  </url>
-  
-  <url>
     <loc>http://zenvv.com/2008/11/22/python-import-path/</loc>
     
     <lastmod>2016-04-07T14:06:36.437Z</lastmod>
@@ -117,13 +201,6 @@
     <loc>http://zenvv.com/2016/04/04/qingming-2016/</loc>
     
     <lastmod>2016-04-06T14:03:54.898Z</lastmod>
-    
-  </url>
-  
-  <url>
-    <loc>http://zenvv.com/2008/09/13/optimize-playmp3list/</loc>
-    
-    <lastmod>2016-04-04T16:20:14.509Z</lastmod>
     
   </url>
   
