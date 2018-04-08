@@ -1,0 +1,92 @@
+<!DOCTYPE html><html lang="zh-CN,en,default"><head><meta http-equiv="content-type" content="text/html; charset=utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="description"><title>WebRTC实时通信 (0) - 浏览器 | 老墙根下，躲雨</title><link rel="stylesheet" type="text/css" href="/css/style.css?v=0.0.0"><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/normalize/3.0.3/normalize.min.css"><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/pure/0.6.0/pure-min.css"><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/pure/0.6.0/grids-responsive-min.css"><link rel="stylesheet" href="//cdn.bootcss.com/font-awesome/4.5.0/css/font-awesome.min.css"><script type="text/javascript" src="//cdn.bootcss.com/jquery/2.2.1/jquery.min.js"></script><link rel="Shortcut Icon" type="image/x-icon" href="/favicon.ico"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="apple-touch-icon-precomposed" href="/apple-touch-icon.png"><link rel="alternate" type="application/atom+xml" href="/atom.xml"></head><body><div class="body_container"><div id="header"><div class="site-name"><h1 class="hidden">WebRTC实时通信 (0) - 浏览器</h1><a id="logo" href="/.">老墙根下，躲雨</a><p class="description">A raindrop is one sea, one rainbow.</p></div><div id="nav-menu"><a href="/." class="current"><i class="fa fa-home"> 首页</i></a><a href="/archives/"><i class="fa fa-archive"> 归档</i></a><a href="/about/"><i class="fa fa-user"> 关于</i></a></div></div><div id="layout" class="pure-g"><div class="pure-u-1 pure-u-md-3-4"><div class="content_container"><div class="post"><h1 class="post-title">WebRTC实时通信 (0) - 浏览器</h1><div class="post-meta">Jan 28, 2018<script src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js" async></script><span id="busuanzi_container_page_pv"> | <span id="busuanzi_value_page_pv"></span><span> Hits</span></span></div><a data-thread-key="2018/01/28/webrtc-browser/" href="/2018/01/28/webrtc-browser/#comments" class="ds-thread-count"></a><div class="post-content"><script src="/assets/js/APlayer.min.js"> </script><h3 id="1-WebRTC"><a href="#1-WebRTC" class="headerlink" title="1. WebRTC"></a>1. WebRTC</h3><p>在2011年之前，实时音视频的开发具有非常大的门槛，全球仅有很少的几家公司拥有这种技术。随着互联网的发展及其实时音视频需求的增大，一种更为简易的开发方式便顺势而出 - WebRTC。</p>
+<p>WebRTC(Web Real-Time Communications)是基于Web的一种实时通信技术平台，即在浏览器节点间进行彼此音频，视频和消息等数据的交互。</p>
+<p>WebRTC通过Web方式对音视频应用进行开发，大大简化了开发难度并进一步推动了音视频应用的普及。</p>
+<p>当前,几家主流的浏览器均已经支持WebRTC技术，如Microsoft Edge/Apple Safari-11/Google Chrome/Mozilla Firefox等。<br>其中，Edge和Safari距离实际使用仍然存在较大的差距，这里将仅叙述具有代表性的Chrome和Firefox。</p>
+<h3 id="2-音视频特性"><a href="#2-音视频特性" class="headerlink" title="2. 音视频特性"></a>2. 音视频特性</h3><p>对基本audio/video特性的支持如下。</p>
+<table>
+<thead>
+<tr>
+<th>Browser</th>
+<th>Audio</th>
+<th>Video</th>
+<th>Video Simulcast</th>
+<th>Video MultiStream</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Chrome</td>
+<td>opus/DTMF</td>
+<td>H264/VP8</td>
+<td>VP8-only</td>
+<td>H264/VP8</td>
+</tr>
+<tr>
+<td>Firefox</td>
+<td>opus/DTMF</td>
+<td>H264/VP8</td>
+<td>VP8-only</td>
+<td>H264/VP8</td>
+</tr>
+</tbody>
+</table>
+<p>对RTCP特性支持如下:</p>
+<table>
+<thead>
+<tr>
+<th>Browser</th>
+<th>RTCP PLI</th>
+<th>RTCP NACK</th>
+<th>RTCP REMB</th>
+<th>ulpfec</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Chrome</td>
+<td>yes</td>
+<td>yes</td>
+<td>yes</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>Firefox</td>
+<td>yes</td>
+<td>no</td>
+<td>yes</td>
+<td>yes</td>
+</tr>
+</tbody>
+</table>
+<h3 id="3-API介绍"><a href="#3-API介绍" class="headerlink" title="3. API介绍"></a>3. API介绍</h3><h5 id="1-getUserMedia"><a href="#1-getUserMedia" class="headerlink" title="1). getUserMedia"></a>1). getUserMedia</h5><p>支持webrtc的浏览器都有类似Navigator.getUserMedia这样的API, 用于获取当前系统的设备资源，如Speaker/Micphone/Camera/DesktopSharing等.</p>
+<p>最新标准中已经废弃使用navigator.getUserMedia，推荐navigator.mediaDevices.getUserMedia.</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">navigator.getUserMedia = navigator.getUserMedia ||</span><br><span class="line">                         navigator.webkitGetUserMedia ||  <span class="comment">// chrome</span></span><br><span class="line">                         navigator.mozGetUserMedia;       <span class="comment">// firefox</span></span><br><span class="line"><span class="keyword">if</span> (navigator.getUserMedia) &#123;</span><br><span class="line">	<span class="keyword">var</span> constraints = &#123; <span class="attr">audio</span>: <span class="literal">true</span>, <span class="attr">video</span>: &#123; <span class="attr">width</span>: <span class="number">1280</span>, <span class="attr">height</span>: <span class="number">720</span> &#125; &#125;; </span><br><span class="line">   navigator.getUserMedia(constraints&#125;,</span><br><span class="line">      <span class="function"><span class="keyword">function</span>(<span class="params">stream</span>) </span>&#123;</span><br><span class="line">         <span class="keyword">var</span> video = <span class="built_in">document</span>.querySelector(<span class="string">'video-element-id'</span>);</span><br><span class="line">         video.srcObject = stream;</span><br><span class="line">         video.onloadedmetadata = <span class="function"><span class="keyword">function</span>(<span class="params">e</span>) </span>&#123;</span><br><span class="line">           video.play();</span><br><span class="line">         &#125;;</span><br><span class="line">      &#125;,</span><br><span class="line">      <span class="function"><span class="keyword">function</span>(<span class="params">err</span>) </span>&#123;</span><br><span class="line">         <span class="built_in">console</span>.log(<span class="string">"The following error occurred: "</span> + err.name);</span><br><span class="line">      &#125;</span><br><span class="line">   );</span><br><span class="line">&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">   <span class="built_in">console</span>.log(<span class="string">"getUserMedia not supported"</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h5 id="2-RTCPeerConnection"><a href="#2-RTCPeerConnection" class="headerlink" title="2). RTCPeerConnection"></a>2). RTCPeerConnection</h5><p>RTCPeerConnection是Webrtc最基本的API接口，用于管理媒体属性，并与远程节点建立数据连接。<br>RTCPeerConnection基本的媒体单位是MediaStream(最新标准中推荐使用MediaTrack).</p>
+<p>在媒体数据连接之外，RTCPeerConnection还支持在相同的连接上管理创建数据通道(createDataChannel),用于传输一些带外数据（如媒体控制数据）.</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">RTCPeerConnection():</span><br><span class="line">	addIceCandidate()</span><br><span class="line">	addStream()</span><br><span class="line">	addTrack()</span><br><span class="line">	createDataChannel() </span><br><span class="line">	createOffer()</span><br><span class="line">	setLocalDescription()</span><br><span class="line">	setRemoteDescription()</span><br><span class="line">	onAddStream()</span><br><span class="line">	getSenders()</span><br></pre></td></tr></table></figure>
+<h3 id="4-API使用示例"><a href="#4-API使用示例" class="headerlink" title="4. API使用示例"></a>4. API使用示例</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">A发送视频，B观看视频.</span><br><span class="line">A和B注册建立signal通道(能够彼此互相通信)。</span><br><span class="line">A创建RTCPeerConnection对象(A-pc).</span><br><span class="line">B创建RTCPeerConnection对象(B-pc).</span><br></pre></td></tr></table></figure>
+<h5 id="1-准备阶段"><a href="#1-准备阶段" class="headerlink" title="1). 准备阶段"></a>1). 准备阶段</h5><p>Step1: A发送视频</p>
+<blockquote>
+<p>调用getUserMedia获取本地视频流添加到A-pc中(addStream)。<br>调用createOffer()生成A-sdp-offer.<br>调用setLocalDescription设置A-sdp-offer.<br>通过signal通道将A-sdp-offer发送给B.</p>
+</blockquote>
+<p>Step2: B观看视频<br>&gt;<br>调用createOffer()生成B-sdp-offer.<br>调用setLocalDescription设置B-sdp-offer.<br>通过signal通道将B-sdp-offer发送给A.  </p>
+<h5 id="2-交互阶段"><a href="#2-交互阶段" class="headerlink" title="2). 交互阶段"></a>2). 交互阶段</h5><p>&gt;<br>A调用setRemoteDescription()设置收到的B-sdp-offer.<br>B调用setRemoteDescription()设置收到的A-sdp-offer.<br>随后A与B交互彼此的SDP ICE candidate数据直到ice stun/turn连接成功。<br>   (调用addIceCandidate()处理ICE sdp消息).<br>ICE连接成功后B将会收到onAddStream事件 - 远程stream建立成功.</p>
+<h5 id="3-媒体数据互通"><a href="#3-媒体数据互通" class="headerlink" title="3). 媒体数据互通"></a>3). 媒体数据互通</h5><p>&gt;<br>A发送视频数据，B接收视频数据并解码</p>
+<h3 id="5-现状"><a href="#5-现状" class="headerlink" title="5. 现状"></a>5. 现状</h3><p>目前，WebRTC的标准仍在持续改进中，各个厂商的浏览器对其支持的力度也不尽相同。其中，Chrome对最新标准API的支持较为迟缓，Firefox比较积极但不够稳定成熟。</p>
+<p>总体上，开放的API接口对基本功能的支持已经覆盖，但是对更精细的控制不足以及也缺少相应的文档说明，故而在实际使用中需要研究浏览器代码逻辑和修改SDP属性来达到某些具体的需求。</p>
+</div><script type="text/javascript" src="/js/share.js?v=0.0.0" async></script><a data-url="http://zenvv.com/2018/01/28/webrtc-browser/" data-id="cjfqg8nu90001fhq550augzxl" class="article-share-link">分享到</a><div class="tags"></div><div class="post-nav"><a href="/2018/01/28/webrtc-arch/" class="pre">WebRTC实时通信 (1) - 架构</a><a href="/2016/07/04/tomcat-cyclic/" class="next">tomcat-cyclic</a></div><div data-thread-key="2018/01/28/webrtc-browser/" data-title="WebRTC实时通信 (0) - 浏览器" data-url="http://zenvv.com/2018/01/28/webrtc-browser/" class="ds-share flat"><div class="ds-share-inline"><ul class="ds-share-icons-16"><li data-toggle="ds-share-icons-more"><a href="javascript:void(0);" class="ds-more">分享到：</a></li><li><a href="javascript:void(0);" data-service="weibo" class="ds-weibo">微博</a></li><li><a href="javascript:void(0);" data-service="qzone" class="ds-qzone">QQ空间</a></li><li><a href="javascript:void(0);" data-service="qqt" class="ds-qqt">腾讯微博</a></li><li><a href="javascript:void(0);" data-service="wechat" class="ds-wechat">微信</a></li></ul><div class="ds-share-icons-more"></div></div></div><div data-thread-key="2018/01/28/webrtc-browser/" data-title="WebRTC实时通信 (0) - 浏览器" data-url="http://zenvv.com/2018/01/28/webrtc-browser/" data-author-key="1" class="ds-thread"></div></div></div></div><div class="pure-u-1-4"><div id="sidebar"><div class="widget"><div class="search-form"><input id="local-search-input" placeholder="Search" type="text" name="q" results="0"/><div id="local-search-result"></div></div></div><div class="widget"><div class="widget-title"><i class="fa fa-folder-o"> 分类</i></div><ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/其他/">其他</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/技术/">技术</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/杂谈/">杂谈</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/算法/">算法</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/胡诌/">胡诌</a></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-star-o"> 标签</i></div><div class="tagcloud"><a href="/tags/media/" style="font-size: 15px;">media</a> <a href="/tags/nginx/" style="font-size: 15px;">nginx</a> <a href="/tags/tomcat/" style="font-size: 15px;">tomcat</a> <a href="/tags/python/" style="font-size: 15px;">python</a></div></div><div class="widget"><div class="widget-title"><i class="fa fa-file-o"> 最新文章</i></div><ul class="post-list"><li class="post-list-item"><a class="post-list-link" href="/2018/01/29/webrtc-sdp/">WebRTC实时通信 (2) - SDP</a></li><li class="post-list-item"><a class="post-list-link" href="/2018/01/28/webrtc-arch/">WebRTC实时通信 (1) - 架构</a></li><li class="post-list-item"><a class="post-list-link" href="/2018/01/28/webrtc-browser/">WebRTC实时通信 (0) - 浏览器</a></li><li class="post-list-item"><a class="post-list-link" href="/2016/07/04/tomcat-cyclic/">tomcat-cyclic</a></li><li class="post-list-item"><a class="post-list-link" href="/2016/07/04/ffmpeg-usage/">ffmpeg-usage</a></li><li class="post-list-item"><a class="post-list-link" href="/2016/06/05/jenkins-by-talk/">jenkins工具</a></li><li class="post-list-item"><a class="post-list-link" href="/2016/05/28/nginx-core/">nginx的core模块</a></li><li class="post-list-item"><a class="post-list-link" href="/2016/05/26/nginx-rewrite/">nginx的rewrite模块</a></li><li class="post-list-item"><a class="post-list-link" href="/2016/05/24/video-colorspace/">视频编码的颜色空间</a></li><li class="post-list-item"><a class="post-list-link" href="/2016/05/24/morning-breeze/">清晨的轻风</a></li></ul></div><div class="widget"><div class="comments-title"><i class="fa fa-comment-o"> 最近评论</i></div><div data-num-items="5" data-show-avatars="0" data-show-time="1" data-show-admin="0" data-excerpt-length="32" data-show-title="1" class="ds-recent-comments"></div></div><div class="widget"><div class="widget-title"><i class="fa fa-external-link"> 友情链接</i></div><ul></ul><a href="http://www.douban.com/" title="豆瓣" target="_blank">豆瓣</a><ul></ul><a href="http://www.newsmth.net/" title="水木" target="_blank">水木</a></div></div></div><div class="pure-u-1 pure-u-md-3-4"><div id="footer">© <a href="/." rel="nofollow">老墙根下，躲雨.</a> Powered by<a rel="nofollow" target="_blank" href="https://hexo.io"> Hexo.</a><a rel="nofollow" target="_blank" href="https://github.com/tufu9441/maupassant-hexo"> Theme</a> by<a rel="nofollow" target="_blank" href="https://github.com/pagecho"> Cho.</a></div></div></div><a id="rocket" href="#top" class="show"></a><script type="text/javascript" src="/js/totop.js?v=0.0.0" async></script><script type="text/javascript" src="//cdn.bootcss.com/fancybox/2.1.5/jquery.fancybox.pack.js" async></script><script type="text/javascript" src="/js/fancybox.js?v=0.0.0" async></script><link rel="stylesheet" type="text/css" href="/css/jquery.fancybox.css?v=0.0.0"><script>var duoshuoQuery = {short_name:'zenvv'};
+(function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0]
+        || document.getElementsByTagName('body')[0]).appendChild(ds);
+})();
+</script><script type="text/javascript" src="/js/search.js?v=0.0.0"></script><script>var search_path = 'search.xml';
+if (search_path.length == 0) {
+   search_path = 'search.xml';
+}
+var path = '/' + search_path;
+searchFunc(path, 'local-search-input', 'local-search-result');
+</script><script type="text/javascript" src="/js/codeblock-resizer.js?v=0.0.0"></script><script type="text/javascript" src="/js/smartresize.js?v=0.0.0"></script></div></body></html>
